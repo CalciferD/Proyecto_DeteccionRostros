@@ -1,36 +1,25 @@
 import streamlit as st
 import cv2
 import numpy as np
-import os
+import face_recognition
 
 # Título de la aplicación
 st.title("Detector de Rostros")
 
-def load_face_cascade():
-    opencv_home = cv2.__file__
-    folders = os.path.dirname(opencv_home)
-    path = os.path.join(folders, 'data', 'haarcascade_frontalface_default.xml')
-    if os.path.isfile(path):
-        return cv2.CascadeClassifier(path)
-    else:
-        raise FileNotFoundError(f"Haar Cascade file not found at {path}")
-
 # Función para detectar rostros en una imagen
 def detect_faces(image):
     try:
-        face_cascade = load_face_cascade()
+        # Convertir de BGR a RGB
+        rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
-        # Convertir la imagen a escala de grises
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-        # Detectar rostros en la imagen
-        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
-
+        # Detectar rostros
+        face_locations = face_recognition.face_locations(rgb_image, model="hog")
+        
         # Dibujar rectángulos alrededor de los rostros detectados
-        for (x, y, w, h) in faces:
-            cv2.rectangle(image, (x, y), (x+w, y+h), (255, 0, 0), 2)
+        for (top, right, bottom, left) in face_locations:
+            cv2.rectangle(image, (left, top), (right, bottom), (255, 0, 0), 2)
 
-        return image, faces
+        return image, face_locations
     except Exception as e:
         st.error(f"Error en la detección de rostros: {str(e)}")
         return image, []
@@ -38,7 +27,7 @@ def detect_faces(image):
 # Configurar la interfaz de usuario
 def main():
     # Título principal
-    st.title("Detector de Rostros con OpenCV")
+    st.title("Detector de Rostros Avanzado")
 
     # Subtítulo
     st.header("Sube una imagen para detectar rostros:")
@@ -58,7 +47,7 @@ def main():
             # Botón para ejecutar la detección de rostros
             if st.button('Detectar Rostros'):
                 # Ejecutar la detección de rostros
-                image_with_faces, faces = detect_faces(image)
+                image_with_faces, face_locations = detect_faces(image)
 
                 # Crear columnas para mostrar la imagen con rostros detectados y el zoom en los rostros
                 col1, col2 = st.columns(2)
@@ -66,10 +55,11 @@ def main():
                     st.image(image_with_faces, channels="BGR", caption='Imagen con rostros detectados')
                 
                 with col2:
-                    for i, (x, y, w, h) in enumerate(faces):
+                    for i, (top, right, bottom, left) in enumerate(face_locations):
                         # Recortar y mostrar cada rostro
-                        face_crop = image[y:y+h, x:x+w]
+                        face_crop = image[top:bottom, left:right]
                         st.image(face_crop, channels="BGR", caption=f'Rostro {i+1}', use_column_width=True)
+
         except Exception as e:
             st.error(f"Error al procesar la imagen: {str(e)}")
 
