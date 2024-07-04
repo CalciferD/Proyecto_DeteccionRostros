@@ -1,14 +1,27 @@
 import streamlit as st
 import cv2
 import numpy as np
+import os
 
 # Título de la aplicación
 st.title("Detector de Rostros")
 
+@st.cache_resource
+def load_face_cascade():
+    opencv_base_dir = os.path.dirname(os.path.abspath(cv2.__file__))
+    haar_file = os.path.join(opencv_base_dir, 'data', 'haarcascade_frontalface_default.xml')
+    
+    if not os.path.exists(haar_file):
+        st.error(f"No se pudo encontrar el archivo Haar Cascade en {haar_file}")
+        return None
+    
+    return cv2.CascadeClassifier(haar_file)
+
 # Función para detectar rostros en una imagen
 def detect_faces(image):
-    # Cargar el clasificador preentrenado
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+    face_cascade = load_face_cascade()
+    if face_cascade is None:
+        return image, []
     
     # Convertir la imagen a escala de grises
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -35,7 +48,8 @@ def main():
 
     if uploaded_file is not None:
         # Mostrar la imagen subida
-        image = np.array(cv2.imdecode(np.frombuffer(uploaded_file.read(), np.uint8), 1))
+        file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
+        image = cv2.imdecode(file_bytes, 1)
         st.image(image, channels="BGR", caption='Imagen original')
 
         # Botón para ejecutar la detección de rostros
